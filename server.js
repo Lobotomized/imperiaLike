@@ -1,6 +1,7 @@
 const cookieParser = require("cookie-parser");
 const bodyParser = require("body-parser");
 const express = require("express");
+const cors = require('cors');
 const jobs = require('./jobs');
 const actions = require('./actions');
 const mongojs = require('mongojs')
@@ -24,6 +25,7 @@ jobs.runEvery('*/5 * * * * *', actions.movePlayer)
 const PORT = process.env.PORT || 3000;
 const app = express();
 
+app.use(cors())
 
 app.engine("html", require("ejs").renderFile);
 app.use(express.static("static"));
@@ -74,6 +76,10 @@ app.get("/profile", auth, function (req, res) {
 app.get("/", function (req, res) {
   res.render("index.html");
 });
+
+app.post("/amILogged", auth, function(req,res) {
+  res.status(200).json({logged:"SUper Logged"})
+})
 
 app.post("/sessionLogin", (req, res) => {
   const idToken = req.body.idToken.toString();

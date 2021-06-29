@@ -38,7 +38,6 @@
           firebase.initializeApp(firebaseConfig);
           // firebase.analytics();
           firebase.auth().setPersistence(firebase.auth.Auth.Persistence.NONE);
-        firebase.auth().setPersistence(firebase.auth.Auth.Persistence.NONE);
 
         document
           .getElementById("signup")
@@ -57,7 +56,6 @@
                     headers: {
                       Accept: "application/json",
                       "Content-Type": "application/json",
-                      "CSRF-Token": Cookies.get("XSRF-TOKEN"),
                     },
                     body: JSON.stringify({ idToken }),
                   });
