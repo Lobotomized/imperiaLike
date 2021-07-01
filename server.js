@@ -25,7 +25,7 @@ jobs.runEvery('*/5 * * * * *', actions.movePlayer)
 const PORT = process.env.PORT || 3000;
 const app = express();
 
-app.use(cors())
+app.use(cors());
 
 app.engine("html", require("ejs").renderFile);
 app.use(express.static("static"));
