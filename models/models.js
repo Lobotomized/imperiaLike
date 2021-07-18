@@ -1,4 +1,4 @@
-const squareTypes = ['ice','pasture','rock','water','swamp']
+const squareTypes = [1,2,3,4,5]
 
 const createRandomSquare = function(x,y){
     const type = squareTypes[Math.floor(Math.random()*squareTypes.length)];

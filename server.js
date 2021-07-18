@@ -1,9 +1,9 @@
 const cookieParser = require("cookie-parser");
 const bodyParser = require("body-parser");
 const express = require("express");
-const cors = require('cors');
 const jobs = require('./jobs');
 const actions = require('./actions');
+const cors = require('cors');
 const {generateMap, createOrReturnUser} = require('./models/repository')
 const {find} = require('./models/db')
 
@@ -30,7 +30,6 @@ jobs.runEvery('*/5 * * * * *', actions.movePlayer)
 const PORT = process.env.PORT || 3000;
 const app = express();
 
-app.use(cors());
 
 app.use(express.static("static"));
 
@@ -96,7 +95,7 @@ app.post("/amILogged", auth, function(req,res) {
 
 app.post("/sessionLogin", async (req, res) => {
   const idToken = req.body.idToken.toString();
-  const expiresIn = 60 * 60 * 24 * 5 * 1000;  
+  const expiresIn = 60 * 60 * 24 * 5 * 1000;
 
   admin
     .auth()
