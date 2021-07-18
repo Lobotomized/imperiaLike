@@ -4,7 +4,6 @@ const express = require("express");
 const cors = require('cors');
 const jobs = require('./jobs');
 const actions = require('./actions');
-const cors = require('cors');
 const {generateMap, createOrReturnUser} = require('./models/repository')
 const {find} = require('./models/db')
 
@@ -97,7 +96,7 @@ app.post("/amILogged", auth, function(req,res) {
 
 app.post("/sessionLogin", async (req, res) => {
   const idToken = req.body.idToken.toString();
-  const expiresIn = 60 * 60 * 24 * 5 * 1000;
+  const expiresIn = 60 * 60 * 24 * 5 * 1000;  
 
   admin
     .auth()
