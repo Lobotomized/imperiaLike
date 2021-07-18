@@ -1,6 +1,7 @@
 const cookieParser = require("cookie-parser");
 const bodyParser = require("body-parser");
 const express = require("express");
+const cors = require('cors');
 const jobs = require('./jobs');
 const actions = require('./actions');
 const cors = require('cors');
@@ -30,6 +31,7 @@ jobs.runEvery('*/5 * * * * *', actions.movePlayer)
 const PORT = process.env.PORT || 3000;
 const app = express();
 
+app.use(cors());
 
 app.use(express.static("static"));
 
