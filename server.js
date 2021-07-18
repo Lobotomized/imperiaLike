@@ -3,12 +3,18 @@ const bodyParser = require("body-parser");
 const express = require("express");
 const jobs = require('./jobs');
 const actions = require('./actions');
-const mongojs = require('mongojs')
-const db = mongojs("mongodb+srv://Lobotomy:Micasmu4ka@cluster0.tippd.mongodb.net/imperiaLike?retryWrites=true&w=majority", ['imperiaLike'])
+const cors = require('cors');
+const {generateMap, createOrReturnUser} = require('./models/repository')
+const {find} = require('./models/db')
 
-db.imperiaLike.find((err,res) => {
-})
+const corsOptions = {
+  origin: 'http://localhost:8080',
+  credentials: true,
+  optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
+  allowedHeaders:['Content-Type', 'Authorization']
 
+}
+ 
 
 
 var admin = require("firebase-admin");
@@ -25,11 +31,14 @@ const PORT = process.env.PORT || 3000;
 const app = express();
 
 
-app.engine("html", require("ejs").renderFile);
 app.use(express.static("static"));
 
 app.use(bodyParser.json());
 app.use(cookieParser());
+app.use(cors(corsOptions));
+
+
+
 
 
 const auth = (req,res,next) => {
@@ -39,46 +48,55 @@ const auth = (req,res,next) => {
     .verifySessionCookie(sessionCookie, true /** checkRevoked */)
     .then((response) => {
       req.userId = response.user_id;
+      console.log(req.userId, '   tuka')
+
       next();
     })
     .catch((error) => {
-      return res.redirect("/login");
+      return res.status(401).json({error})
     });
   }
 
-app.get("/login", function (req, res) {
-  res.render("login.html");
-});
 
 app.post("/test", function(req,res) {
-  db.imperiaLike.insertOne({test:'blabla'}, function(err, dbResponse){
-    return res.status(200).json(dbResponse);
+  generateMap(10,10).then((resp) => {
+    return res.status(200).json(resp)
+  }).catch((err) => {
+    return res.status(400).json(err);
   })
 })
-app.get("/test", function(req,res){
-  db.imperiaLike.find((err,dbResponse) => {
-    return res.status(200).json(dbResponse)
-  });
 
+app.get("/map", function(req,res) {
+  find('map',{}).then((resp) => {
+    return res.status(200).json(resp)
+  }).catch((err) => {
+    return res.status(400).json(err);
+  })
+})
+// app.get("/test", function(req,res){
+//   db.imperiaLike.find((err,dbResponse) => {
+//     return res.status(200).json(dbResponse)
+//   });
+// })
+
+app.get("/cookietest", auth, function(req,res) {
+  res.send({session:req.cookies.session, logged:'Super Logged'})
 })
 
-app.get("/signup", function (req, res) {
-  res.render("signup.html");
-});
+app.post("/amILogged", auth, function(req,res) {
+  console.log(req.userId)
+  createOrReturnUser(req.userId).then((resp) => {
+    console.log(resp)
+    return res.status(200).json({user4e:resp})
+  })
+  
+})
 
-app.get("/profile", auth, function (req, res) {
-  const sessionCookie = req.cookies.session || "";
-  res.render("profile.html");
-});
 
-app.get("/", function (req, res) {
-  res.render("index.html");
-});
-
-app.post("/sessionLogin", (req, res) => {
+app.post("/sessionLogin", async (req, res) => {
   const idToken = req.body.idToken.toString();
-
   const expiresIn = 60 * 60 * 24 * 5 * 1000;
+
   admin
     .auth()
     .createSessionCookie(idToken, { expiresIn })
