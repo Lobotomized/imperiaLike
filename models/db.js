@@ -14,6 +14,18 @@ module.exports = {
             })
       })
     },
+    findOne:function(collection, match){
+        return new Promise((resolve,reject) => {
+            db[collection].find(match, function(err, dbResponse){
+              if(err){
+                  reject(err)
+              }
+              else{
+                  resolve(dbResponse[0])
+              }
+            })
+      })
+    },
     insertOne:function(collection,obj){
         return new Promise((resolve,reject) => {
               db[collection].insertOne(obj, function(err, dbResponse){

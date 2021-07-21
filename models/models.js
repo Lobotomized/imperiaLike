@@ -51,28 +51,28 @@ const createNewHero = function(x,y,userId,formation, speed){
         x:x,
         y:y,
         userId:userId,
-        formation:createDefaultFormation(),
+        formation:formation,
         speed:speed,
     }
 }
 
-/*
-    We need a utility method that gets tile, hero and castle for particular square
+const createRandomHero = function(userId){
 
-    We need a method that checks for available x/y for particular castle
+    /*
+        Get Available X and Y
+    */
+    return createNewHero(1,1,userId,createDefaultFormation(),5)
+}
 
-    We need a method that when creates a new User it also creates a default hero for him with a default army at an available x/y
+const armyAvailableSquare = function(){
 
-    We need a move method for heroes
-
-    We need a method that when creates a  new User it also creates a default castle for him  at an  available x/y
-
-*/
+}
 
 
 module.exports = {
     //Models
     createRandomSquare:createRandomSquare,
     createNewCastle:createNewCastle,
-    createNewHero:createNewHero
+    createNewHero:createNewHero,
+    createRandomHero:createRandomHero
 }

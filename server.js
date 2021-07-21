@@ -2,11 +2,10 @@ const cookieParser = require("cookie-parser");
 const bodyParser = require("body-parser");
 const express = require("express");
 const jobs = require('./jobs');
-const actions = require('./actions');
 const cors = require('cors');
 const {generateMap, createOrReturnUser} = require('./models/repository')
-const {find} = require('./models/db')
-
+const {find, findOne} = require('./models/db')
+const {moveHero, checkArmyAtDestination, utility} = require('./actions')
 const corsOptions = {
   origin: 'http://localhost:8080',
   credentials: true,
@@ -14,18 +13,20 @@ const corsOptions = {
   allowedHeaders:['Content-Type', 'Authorization']
 
 }
- 
+const cron = require('node-schedule');
 
 
-var admin = require("firebase-admin");
+const admin = require("firebase-admin");
 
-var serviceAccount = require("./serviceAccountKey.json");
+const serviceAccount = require("./serviceAccountKey.json");
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
 
-jobs.runEvery('*/5 * * * * *', actions.movePlayer)
+//  jobs.runEvery('*/1 * * * * *', function(){
+//    console.log('vliza')
+//  })
 
 const PORT = process.env.PORT || 3000;
 const app = express();
@@ -48,7 +49,6 @@ const auth = (req,res,next) => {
     .verifySessionCookie(sessionCookie, true /** checkRevoked */)
     .then((response) => {
       req.userId = response.user_id;
-      console.log(req.userId, '   tuka')
 
       next();
     })
@@ -84,9 +84,7 @@ app.get("/cookietest", auth, function(req,res) {
 })
 
 app.post("/amILogged", auth, function(req,res) {
-  console.log(req.userId)
   createOrReturnUser(req.userId).then((resp) => {
-    console.log(resp)
     return res.status(200).json({user4e:resp})
   })
   
@@ -116,6 +114,43 @@ app.get("/sessionLogout", (req, res) => {
   res.clearCookie("session");
   res.redirect("/login");
 });
+
+app.post("/move",auth, async (req,res) => {
+  /*
+    0.Funkciq koqto vrushta pravilnoto vreme za razstoqnie
+    1.Iskame da proverim dali destinaciqta e zaeta ot armiq - Checked
+    2.Ako e zaeta ot armiq pritejavana ot human player iskame da pratim  notifikaciq na napadnatiq
+    3.Iskame da pusnem Cron Job koito da se izpylni sled koeto vryshta nqkakva funkciq koqto smqta razstoqniqta
+    4.Sled zavarshvane na Cron Joba iskame da se izpylni ili Move Action ili Attack Action
+  */
+ console.log(cron.scheduledJobs)
+ let hero;
+
+  try{
+    hero = await findOne('hero',{_id:ObjectID(req.body.heroId)})
+  }
+  catch(err){
+    return res.status(400).json(err);
+  }
+
+  const destinationX = req.body.x;
+  const destinationY = req.body.y;
+  let opposingArmy;
+  try{
+    opposingArmy =  await checkArmyAtDestination(destinationX,destinationY);
+  }
+  catch(err){
+    return res.status(400);
+  }
+  if(opposingArmy){
+    return res.status(200).json({message:"Opposing Army there can't move"})
+  }
+  else{
+    // const timeRequired = utility.getTimeFromDistanceAndSpeed(starting)
+    jobs.runOnce('*/60 * * * * *',moveHero,[req.userId,req.body.heroId,destinationX,destinationY], 'moving')
+    return res.status(200).json({message:"Army is  on it's way"})
+  }
+})
 
 app.listen(PORT, () => {
   console.log(`Listening on http://localhost:${PORT}`);

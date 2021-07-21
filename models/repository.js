@@ -1,19 +1,25 @@
-const {createRandomSquare}  =  require('./models')
-const {insertMany, find, insertOne} = require('./db')
+const {createRandomSquare, createRandomHero}  =  require('./models')
+const {insertMany, find, insertOne, dropCollection} = require('./db')
 
 module.exports = {
     generateMap:async function(sizeX,sizeY){
-        let xCounter = sizeX;
-        let yCounter = sizeY;
+        try{
+            await dropCollection('map')
+        }
+        catch(err){
+
+        }
+        let xCounter = 0;
+        let yCounter = 0;
         const mapTillNow = [];
-        while(yCounter > 0){
-            xCounter = sizeX;
-            while(xCounter > 0){
+        while(yCounter < sizeY){
+            xCounter = 0;
+            while(xCounter < sizeX){
                 mapTillNow.push(createRandomSquare(xCounter,yCounter))
                 //Push square to mongo
-                xCounter--;
+                xCounter++
             }
-            yCounter--;
+            yCounter++;
         }
         try{
             return await insertMany('map',mapTillNow)
@@ -22,6 +28,7 @@ module.exports = {
             return err;
         }
     },
+    
     createOrReturnUser: async function(userId){
         let user;
         try{
@@ -33,7 +40,8 @@ module.exports = {
 
         if(!user){
             try{
-                user = await insertOne('user',{'userId':userId})
+                const firstHero = await insertOne('hero',createRandomHero(userId))
+                user = await insertOne('user',{'userId':userId, 'heroes':[firstHero._id]})
                 return user
             }
             catch(err){
