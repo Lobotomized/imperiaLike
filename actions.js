@@ -1,18 +1,19 @@
 const {update, find} = require('./models/db')
 ObjectID = require('mongodb').ObjectID
-
+const config = require('./config');
 const getDistance = function(startingX,startingY,endPointX,endPointY){
-    const yDist = Math.Abs(y2 - y1);
-    const xDist = Math.Abs(x2 - x1);
-    const diagShortcut = Math.Min(yDist, xDist);
+    const yDist = Math.abs(endPointY - startingY);
+    const xDist = Math.abs(endPointX - startingX);
+    const diagShortcut = Math.min(yDist, xDist);
     return yDist + xDist - diagShortcut;
 }
+
 
 module.exports = {
     utility:{
         getTimeFromDistanceAndSpeed:function(startingX,startingY, endPointX, endPointY,speed){
             const distance = getDistance(startingX, startingY, endPointX, endPointY);
-            return Math.floor((distance*50)/speed);
+            return Math.floor((distance*config.gameDelay)/speed);
         },
         getDistance: getDistance
     },
@@ -30,7 +31,7 @@ module.exports = {
         if(userId === hero.userId){
             let res;
             try{
-                res = await update('hero',{_id:ObjectID(heroId)},{x:destinationX,y:destinationY})
+                res = await update('hero',{_id:ObjectID(heroId)},{x:destinationX,y:destinationY, marching:false})
             }
             catch(err){
                 throw err;

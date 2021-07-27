@@ -4,7 +4,7 @@ const express = require("express");
 const jobs = require('./jobs');
 const cors = require('cors');
 const {generateMap, createOrReturnUser} = require('./models/repository')
-const {find, findOne} = require('./models/db')
+const {find, findOne, update} = require('./models/db')
 const {moveHero, checkArmyAtDestination, utility} = require('./actions')
 const corsOptions = {
   origin: 'http://localhost:8080',
@@ -19,14 +19,11 @@ const cron = require('node-schedule');
 const admin = require("firebase-admin");
 
 const serviceAccount = require("./serviceAccountKey.json");
+const { ObjectID } = require("mongodb");
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
-
-//  jobs.runEvery('*/1 * * * * *', function(){
-//    console.log('vliza')
-//  })
 
 const PORT = process.env.PORT || 3000;
 const app = express();
@@ -73,11 +70,6 @@ app.get("/map", function(req,res) {
     return res.status(400).json(err);
   })
 })
-// app.get("/test", function(req,res){
-//   db.imperiaLike.find((err,dbResponse) => {
-//     return res.status(200).json(dbResponse)
-//   });
-// })
 
 app.get("/cookietest", auth, function(req,res) {
   res.send({session:req.cookies.session, logged:'Super Logged'})
@@ -87,7 +79,6 @@ app.post("/amILogged", auth, function(req,res) {
   createOrReturnUser(req.userId).then((resp) => {
     return res.status(200).json({user4e:resp})
   })
-  
 })
 
 
@@ -115,40 +106,105 @@ app.get("/sessionLogout", (req, res) => {
   res.redirect("/login");
 });
 
+app.get("/userjobs", auth, (req,res) => {
+  let jobove = jobs.getJobsForUser(cron.scheduledJobs,req.userId)
+  if(jobove.length){
+    const returnTimes = jobove.reduce((prev, curr) => {
+      if(Array.isArray(prev))
+      {
+        return [...prev, {arrivalTime:curr.props.nextInvocation._date.c, heroId:curr.props.heroId}] 
+      }
+      else{
+        return [{arrivalTime:curr.props.nextInvocation._date.c, heroId:curr.props.heroId}]
+      }
+    })
+
+    if(Array.isArray(returnTimes)){
+      return res.status(200).json(returnTimes)
+    }
+    return res.status(200).json([])
+  }
+  else{
+    return res.status(200)
+  }
+})
+
+app.get("/heromarch/:heroId", auth, async (req,res) => {
+  let job
+  try{
+    const hero = await findOne('hero',{_id:ObjectID(req.params.heroId)})
+    if(!hero){
+      return res.status(400).json({message:"No such hero"})
+    }
+    if(req.userId !== hero.userId){
+      return res.status(400).json({message:"Not enough privilige"});
+    }
+    job = jobs.getHeroMarch(cron.scheduledJobs,req.params.heroId)
+    if(job){
+      return res.status(200).json({timeOfArrival:job.props.nextInvocation._date.c});
+    }
+    else{
+      return res.status(200).json({message:"Hero is not  marching yet"})
+    }
+  }
+  catch(err){
+    console.log(err)
+    return res.status(400).json(err);
+  }
+
+})
+
 app.post("/move",auth, async (req,res) => {
   /*
-    0.Funkciq koqto vrushta pravilnoto vreme za razstoqnie
+    0.Funkciq koqto vrushta pravilnoto vreme za razstoqnie kato tekst
+    1.Да се отбележи че героят в момента пътува и да не се допуска да се движи пак ако пътува
     1.Iskame da proverim dali destinaciqta e zaeta ot armiq - Checked
     2.Ako e zaeta ot armiq pritejavana ot human player iskame da pratim  notifikaciq na napadnatiq
     3.Iskame da pusnem Cron Job koito da se izpylni sled koeto vryshta nqkakva funkciq koqto smqta razstoqniqta
     4.Sled zavarshvane na Cron Joba iskame da se izpylni ili Move Action ili Attack Action
   */
- console.log(cron.scheduledJobs)
- let hero;
-
+  let hero;
   try{
     hero = await findOne('hero',{_id:ObjectID(req.body.heroId)})
   }
   catch(err){
     return res.status(400).json(err);
   }
+  if(!hero){
+    return res.status(404).json({message:"No such hero"})
+  }
+
+  if(hero.marching){
+    return res.status(200).json({message:"While the hero is marching you can't change his destination"})
+  }
 
   const destinationX = req.body.x;
   const destinationY = req.body.y;
-  let opposingArmy;
+  let opposingHero;
   try{
-    opposingArmy =  await checkArmyAtDestination(destinationX,destinationY);
+    opposingHero =  await checkArmyAtDestination(destinationX,destinationY);
   }
   catch(err){
     return res.status(400);
   }
-  if(opposingArmy){
+  if(opposingHero){
+    if(opposingHero.userId === hero.userId){
+      return res.status(200).json({message:"You can't go there. The spot is taken of another friendly hero."})
+    }
     return res.status(200).json({message:"Opposing Army there can't move"})
   }
   else{
-    // const timeRequired = utility.getTimeFromDistanceAndSpeed(starting)
-    jobs.runOnce('*/60 * * * * *',moveHero,[req.userId,req.body.heroId,destinationX,destinationY], 'moving')
-    return res.status(200).json({message:"Army is  on it's way"})
+    const timeRequired = utility.getTimeFromDistanceAndSpeed(hero.x,hero.y,destinationX,destinationY,hero.speed);
+    
+    try{
+      hero.marching = true;
+      await update('hero',{_id:hero._id}, {marching:true})
+    }
+    catch(err){
+      return res.status(400).json(err);
+    }
+    await jobs.runOnce(timeRequired,moveHero,[req.userId,req.body.heroId,destinationX,destinationY], {userId:req.userId,heroId:hero._id});
+    return res.status(200).json({message:"Army is  on it's way"});
   }
 })
 
