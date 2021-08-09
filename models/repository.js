@@ -30,6 +30,7 @@ module.exports = {
     },
     
     createOrReturnUser: async function(userId){
+        console.log(  '   vliza v create or ret user')
         let user;
         try{
             const userArr = await find('user',{'userId':userId})
@@ -40,9 +41,10 @@ module.exports = {
 
         if(!user){
             try{
-                const firstHero = await insertOne('hero',createRandomHero(userId))
-                user = await insertOne('user',{'userId':userId, 'heroes':[firstHero._id]})
-                return user
+                const firstHero = await insertOne('hero',createRandomHero(userId));
+                console.log(firstHero)
+                user = await insertOne('user',{'userId':userId, 'heroes':[firstHero._id]});
+                return user;
             }
             catch(err){
                 return err;

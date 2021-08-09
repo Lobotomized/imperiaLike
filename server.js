@@ -6,6 +6,7 @@ const cors = require('cors');
 const {generateMap, createOrReturnUser} = require('./models/repository')
 const {find, findOne, update} = require('./models/db')
 const {moveHero, checkArmyAtDestination, utility} = require('./actions')
+const battleLogic = require('./battleLogic');
 const corsOptions = {
   origin: 'http://localhost:8080',
   credentials: true,
@@ -76,6 +77,7 @@ app.get("/cookietest", auth, function(req,res) {
 })
 
 app.post("/amILogged", auth, function(req,res) {
+  console.log('am I  logged?')
   createOrReturnUser(req.userId).then((resp) => {
     return res.status(200).json({user4e:resp})
   })
@@ -175,7 +177,7 @@ app.post("/move",auth, async (req,res) => {
   }
 
   if(hero.marching){
-    return res.status(200).json({message:"While the hero is marching you can't change his destination"})
+    return res.status(200).json({message:"While the hero is marching you can't change his destination"});
   }
 
   const destinationX = req.body.x;
@@ -189,9 +191,39 @@ app.post("/move",auth, async (req,res) => {
   }
   if(opposingHero){
     if(opposingHero.userId === hero.userId){
-      return res.status(200).json({message:"You can't go there. The spot is taken of another friendly hero."})
+      return res.status(200).json({message:"You can't go there. The spot is taken of another friendly hero."});
     }
-    return res.status(200).json({message:"Opposing Army there can't move"})
+    else{
+      /*  
+        1. Send Notification to the attacked player
+        2. Create a job calling the BattleFunction with the two opposing armies
+        3. Create this Battle Function
+        4.Refactor (
+          We want to be able to call MoveJob() that creates the move hero job and BattleJob() for the battle
+        )
+
+      */
+
+
+
+      //Create Board 
+      // const board = {
+      //   defenders:{
+      //     lane1:opposingHero.formation.frontLane,
+      //     lane2:opposingHero.formation.backLane,
+      //     team:"defenders"
+      //   },
+      //   attackers:{
+      //     lane1:hero.formation.frontLane,
+      //     lane2:hero.formation.backLane,
+      //     team:"attackers"
+      //   }
+      // }
+      // console.log('before')
+      // const battleResult = battleLogic.general(board)
+      // console.log(battleResult, '  hmm')
+      return res.status(200).json({message:"Ke se tepate"});
+    }
   }
   else{
     const timeRequired = utility.getTimeFromDistanceAndSpeed(hero.x,hero.y,destinationX,destinationY,hero.speed);
